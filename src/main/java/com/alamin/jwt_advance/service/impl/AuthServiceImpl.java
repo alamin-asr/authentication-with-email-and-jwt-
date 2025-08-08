@@ -13,7 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
 import org.springframework.stereotype.Service;
 
 import java.security.Principal;
@@ -25,7 +26,7 @@ import java.util.UUID;
 public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final EmailServiceImpl emailServiceImpl;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
@@ -40,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
         User user = new User();
         user.setEmail(request.getEmail());
         user.setUsername(request.getUsername());
-        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setPassword(bCryptPasswordEncoder.encode(rawPassword));
         //user.setPassword(rawPassword);
 
        user.setRole(roleRepository.findByName("ADMIN").orElseThrow());
@@ -77,10 +78,10 @@ public class AuthServiceImpl implements AuthService {
         }
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found with username: "+principal.getName()));
-        if (!passwordEncoder.matches(upDatePasswordDto.getOldPassword(), user.getPassword())) {
+        if (!bCryptPasswordEncoder.matches(upDatePasswordDto.getOldPassword(), user.getPassword())) {
             throw new RuntimeException("Old password is incorrect");
         }
-        user.setPassword(passwordEncoder.encode(upDatePasswordDto.getNewPassword()));
+        user.setPassword(bCryptPasswordEncoder.encode(upDatePasswordDto.getNewPassword()));
         userRepository.save(user);
         emailServiceImpl.sendPassword(user.getEmail(), upDatePasswordDto.getNewPassword(),user.getUsername());
         return "Password updated";
